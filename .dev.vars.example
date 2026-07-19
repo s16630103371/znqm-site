@@ -1,0 +1,5 @@
+# 本地 Pages Functions 调试用密钥模板
+# 用法：复制本文件为 .dev.vars，把值换成真实 Key，然后运行  wrangler pages dev .
+# 注意：.dev.vars 已被 .gitignore 忽略，绝不会提交到仓库。
+
+API_KEY=your_tokenhub_bearer_key_here

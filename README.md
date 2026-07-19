@@ -11,46 +11,66 @@
 ## 目录
 ```
 znqm-site/
-├── index.html              # 站点入口
+├── index.html                 # 站点入口
 ├── assets/
-│   ├── css/style.css       # 视觉样式（青+品红主轴）
+│   ├── css/style.css          # 视觉样式（青+品红主轴）
 │   ├── js/
-│   │   ├── api.js          # 封装 /api 接口
-│   │   ├── app.js          # 交互主控（Tab/上传/状态机/画廊/toast）
-│   │   ├── poster.js       # 前端海报合成
-│   │   └── video.js        # 前端视频合成
-│   └── img/gallery/        # 预生成的作品（真实 AI 图）
-├── worker/                 # Cloudflare Worker（生产后端）
+│   │   ├── api.js             # 封装 /api 接口
+│   │   ├── app.js             # 交互主控（Tab/上传/状态机/画廊/toast）
+│   │   ├── poster.js          # 前端海报合成
+│   │   └── video.js           # 前端视频合成
+│   └── img/gallery/           # 预生成的作品（真实 AI 图）
+├── functions/api/
+│   └── [[route]].js           # Cloudflare Pages Functions（生产后端 /api/*）
+├── worker/                    # 备选：独立 Cloudflare Worker（替换旧坏后端用）
 │   ├── index.js
 │   └── wrangler.toml
-└── server/dev.mjs          # 本地开发代理（用于测试，密钥走环境变量）
+├── .github/workflows/
+│   └── deploy.yml             # 推送到 main 自动部署到 Cloudflare Pages
+├── wrangler.toml              # 根：Pages 项目配置
+├── .dev.vars.example          # 本地密钥模板（复制为 .dev.vars）
+└── server/dev.mjs             # 本地开发代理（用于测试，密钥走环境变量）
 ```
 
 ## 本地预览 / 测试
 ```bash
-# 需要 Node 18+
+# 方式一：纯前端 + 本地 Node 代理（最简单）
 API_KEY=sk-xxxx node server/dev.mjs
 # 打开 http://localhost:8788
+
+# 方式二：用 wrangler 跑完整 Pages（含 Functions）
+cp .dev.vars.example .dev.vars   # 填入真实 Key
+npx wrangler pages dev .
 ```
-`API_KEY` 即 `tokenhub.tencentmaas.com` 的 Bearer Key。
 
 ## 部署到 znqm.cloud
-站点为纯静态，后端是 Cloudflare Worker。两种常见组合：
 
-### A. 静态托管（GitHub Pages / Cloudflare Pages）+ Cloudflare Worker
-1. 把 `index.html` 与 `assets/` 部署到静态主机（已绑定 znqm.cloud）。
-2. 部署 Worker：
-   ```bash
-   cd worker
-   npm i -g wrangler
-   wrangler login
-   wrangler secret put API_KEY      # 填入 tokenhub 的 Key
-   wrangler deploy
-   ```
-3. 在 Cloudflare 把 `znqm.cloud/api/*` 路由指向该 Worker（见 `wrangler.toml` 的 routes）。
+### ★ 推荐：Cloudflare Pages（静态 + Functions 单仓单部署）
+`index.html` + `assets/` 是静态站，`functions/api/[[route]].js` 自动接管 `/api/*`，**同域、无需额外路由**。
 
-### B. 全站 Cloudflare Pages（Functions 合并）
-将 `worker/index.js` 作为 `functions/api/[[path]].js`，构建输出为站点的 `index.html` + `assets/`；在 Pages 项目设置里添加环境变量 `API_KEY`（密文）。
+**方式 A — GitHub Actions 自动部署（零 CLI）**
+1. 在 Cloudflare 控制台拿到 `CLOUDFLARE_API_TOKEN`（Pages 编辑权限）和 `CLOUDFLARE_ACCOUNT_ID`。
+2. 在 GitHub 仓库 `Settings → Secrets` 添加这两个密钥。
+3. `git push` 到 `main`，Action 自动 `wrangler pages deploy .`。
+4. Cloudflare Pages 控制台 → znqm-site → **Settings → Variables** 添加名为 `API_KEY` 的 Secret（值 = tokenhub Bearer Key）。
+5. 控制台 → **Custom domains** 添加 `znqm.cloud`（一次性）。
+
+**方式 B — 本地一条命令**
+```bash
+cp .dev.vars.example .dev.vars   # 填入真实 Key
+npx wrangler pages deploy . --project-name znqm-site
+# 若首次建项目：npx wrangler pages project create znqm-site --production-branch=main
+```
+
+### 备选：独立 Cloudflare Worker（替换你现有的坏后端）
+你当前 znqm.cloud 的后端是个返回 500 的 Worker。可直接用 `worker/` 替换它：
+```bash
+cd worker
+npx wrangler login
+npx wrangler secret put API_KEY      # 填入 tokenhub 的 Key
+npx wrangler deploy                  # 部署为 znqm-api
+```
+然后在 Cloudflare 把 `znqm.cloud/api/*` 路由指向该 Worker（见 `worker/wrangler.toml` 的 routes 注释）。
 
 > 密钥只存在于后端环境变量，**不会**下发到浏览器。前端一律通过同源 `/api/*` 调用。
 
