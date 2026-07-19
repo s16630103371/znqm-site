@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZNQM · AI 生成工作室 | 图片 · 视频 · 海报</title>
+  <meta name="description" content="ZNQM AI 生成工作室 —— 上传图片或视频，AI 帮你生成海报与视频。基于混元生图与前端实时合成。" />
+  <meta property="og:title" content="ZNQM · AI 生成工作室" />
+  <meta property="og:description" content="上传图片或视频，AI 生成海报与视频。" />
+  <meta property="og:type" content="website" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%23070712' stroke='%2300e5ff' stroke-width='1.5'/><text x='16' y='22' text-anchor='middle' fill='%2300e5ff' font-family='monospace' font-size='16' font-weight='bold'>Z</text></svg>" />
+  <link rel="preconnect" href="https://tokenhub.tencentmaas.com" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <canvas id="particles-canvas" aria-hidden="true"></canvas>
+  <div class="scanlines" aria-hidden="true"></div>
+
+  <!-- NAV -->
+  <nav class="nav" id="nav">
+    <a href="#top" class="nav-logo" data-text="ZNQM">ZNQM</a>
+    <ul class="nav-links" id="navLinks">
+      <li><a href="#generate">生成</a></li>
+      <li><a href="#gallery">作品</a></li>
+      <li><a href="#about">关于</a></li>
+      <li><a class="nav-gh" href="https://github.com/s16630103371" target="_blank" rel="noopener">GitHub ↗</a></li>
+    </ul>
+    <button class="nav-toggle" id="navToggle" aria-label="菜单" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" id="top">
+    <div class="hero-inner">
+      <div class="badge">AI 驱动 · 图片 / 视频 / 海报 生成</div>
+      <h1 class="glitch" data-text="ZNQM">ZNQM</h1>
+      <p class="hero-sub">AI 生成工作室</p>
+      <p class="hero-desc">输入你的创意，上传图片或视频，让 AI 为你创造视觉世界。<br/>图生图 · 图生视频 · 图生海报，一站搞定。</p>
+      <div class="hero-cta">
+        <a href="#generate" class="btn btn-primary">开始创作</a>
+        <a href="#gallery" class="btn btn-ghost">查看作品</a>
+      </div>
+      <div class="hero-stats">
+        <div class="stat"><b data-count="6">0</b><span>创作模式</span></div>
+        <div class="stat"><b id="statGenerated">0</b><span>已生成</span></div>
+        <div class="stat"><b>∞</b><span>7×24 在线</span></div>
+        <div class="stat"><b>&lt;30s</b><span>出图耗时</span></div>
+      </div>
+    </div>
+    <div class="scroll-hint" aria-hidden="true">▼</div>
+  </header>
+
+  <!-- GENERATOR -->
+  <section class="section" id="generate">
+    <div class="section-head">
+      <h2>创作台</h2>
+      <p>选择模式，上传素材，写下你的想法。</p>
+    </div>
+
+    <div class="gen-card">
+      <div class="gen-tabs" role="tablist">
+        <button class="gen-tab active" data-tab="img2img" role="tab" aria-selected="true">图生图</button>
+        <button class="gen-tab" data-tab="img2video" role="tab" aria-selected="false">图生视频</button>
+        <button class="gen-tab" data-tab="poster" role="tab" aria-selected="false">图生海报</button>
+      </div>
+
+      <!-- 图生图 -->
+      <div class="gen-panel active" id="panel-img2img" role="tabpanel">
+        <div class="gen-grid">
+          <div class="gen-left">
+            <label class="dropzone" id="dz-img2img">
+              <input type="file" accept="image/*" hidden />
+              <div class="dz-empty">🖼️ 点击或拖拽上传参考图（可选）</div>
+              <div class="dz-preview" hidden><img alt="参考图预览" /><button type="button" class="dz-remove">✕</button></div>
+            </label>
+            <textarea id="img2img-prompt" class="prompt" rows="3" maxlength="500" placeholder="描述你想要生成的画面，例如：赛博朋克城市夜景，霓虹倒映在湿漉漉的街道上"></textarea>
+            <div class="prompt-meta"><span id="img2img-count">0/500</span></div>
+            <div class="row">
+              <select id="img2img-size" class="select">
+                <option value="1024x1024">正方形 1024</option>
+                <option value="768x1024">竖版 768×1024</option>
+                <option value="1024x768">横版 1024×768</option>
+              </select>
+              <button class="btn btn-primary gen-go" data-act="img2img">⚡ 生成图片</button>
+            </div>
+          </div>
+          <div class="gen-right">
+            <div class="result" id="res-img2img">
+              <div class="result-empty">生成结果将显示在这里</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 图生视频 -->
+      <div class="gen-panel" id="panel-img2video" role="tabpanel" hidden>
+        <div class="gen-grid">
+          <div class="gen-left">
+            <label class="dropzone multi" id="dz-img2video">
+              <input type="file" accept="image/*,video/*" multiple hidden />
+              <div class="dz-empty">🎞️ 上传图片（多张合成视频）或一段视频</div>
+              <div class="dz-preview" hidden></div>
+            </label>
+            <textarea id="img2video-prompt" class="prompt" rows="2" maxlength="300" placeholder="视频主题/风格（用于片头标题，可选）"></textarea>
+            <div class="row">
+              <select id="img2video-style" class="select">
+                <option value="kenburns">电影感 · 推拉平移</option>
+                <option value="fade">渐隐转场 · 幻灯片</option>
+                <option value="zoom">缩放脉冲</option>
+              </select>
+              <button class="btn btn-primary gen-go" data-act="img2video">🎬 生成视频</button>
+            </div>
+            <p class="hint">视频由前端实时合成（Canvas + MediaRecorder），无需等待、离线可用。</p>
+          </div>
+          <div class="gen-right">
+            <div class="result" id="res-img2video">
+              <div class="result-empty">生成结果将显示在这里</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 图生海报 -->
+      <div class="gen-panel" id="panel-poster" role="tabpanel" hidden>
+        <div class="gen-grid">
+          <div class="gen-left">
+            <label class="dropzone" id="dz-poster">
+              <input type="file" accept="image/*" hidden />
+              <div class="dz-empty">🖼️ 上传一张主视觉图</div>
+              <div class="dz-preview" hidden><img alt="主视觉预览" /><button type="button" class="dz-remove">✕</button></div>
+            </label>
+            <input id="poster-theme" class="prompt" type="text" maxlength="40" placeholder="海报主题，例如：未来电音派对" />
+            <div class="row">
+              <select id="poster-template" class="select">
+                <option value="cinematic">电影感</option>
+                <option value="minimal">极简</option>
+                <option value="neon">霓虹</option>
+                <option value="retro">复古</option>
+              </select>
+              <button class="btn btn-ghost" id="poster-ai" type="button">✨ AI 写文案</button>
+            </div>
+            <div class="row">
+              <input id="poster-title" class="prompt" type="text" maxlength="30" placeholder="标题（留空用 AI 生成）" />
+              <input id="poster-subtitle" class="prompt" type="text" maxlength="40" placeholder="副标题" />
+            </div>
+            <button class="btn btn-primary gen-go" data-act="poster">🖼️ 生成海报</button>
+          </div>
+          <div class="gen-right">
+            <div class="result" id="res-poster">
+              <div class="result-empty">海报预览将显示在这里</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- GALLERY -->
+  <section class="section" id="gallery">
+    <div class="section-head">
+      <h2>作品长廊</h2>
+      <p>AI 生成的真实作品 · 点击「生成相似」一键带入创作台</p>
+    </div>
+    <div class="gallery" id="galleryGrid"><!-- filled by JS --></div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="section" id="about">
+    <div class="section-head"><h2>关于 ZNQM</h2></div>
+    <div class="about-grid">
+      <div class="about-card">
+        <h3>技术栈</h3>
+        <ul>
+          <li><b>生图</b>：混元 hy-image-v3.0（tokenhub.tencentmaas.com）</li>
+          <li><b>文案 / 描述</b>：qwen3.5-plus、hunyuan-t1-vision</li>
+          <li><b>视频</b>：前端 Canvas + MediaRecorder 实时合成</li>
+          <li><b>后端</b>：Cloudflare Worker 代理，密钥安全不下发浏览器</li>
+        </ul>
+      </div>
+      <div class="about-card">
+        <h3>能力</h3>
+        <ul>
+          <li>图生图：参考图 + 提示词生成新画面</li>
+          <li>图生视频：多图/视频 → 可下载的动态视频</li>
+          <li>图生海报：主视觉 + AI 文案 → 可下载海报 PNG</li>
+        </ul>
+      </div>
+      <div class="about-card">
+        <h3>创作者</h3>
+        <p>由 <a href="https://github.com/s16630103371" target="_blank" rel="noopener">@s16630103371</a> 打造。<br/>同名 HarmonyOS App「AiCreator」正在打磨中。</p>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div>ZNQM · AI 生成工作室 — <a href="https://znqm.cloud" target="_blank" rel="noopener">znqm.cloud</a></div>
+    <div class="foot-links">
+      <a href="#generate">创作</a><a href="#gallery">作品</a><a href="https://github.com/s16630103371" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </footer>
+
+  <!-- TOAST -->
+  <div class="toast-wrap" id="toastWrap" aria-live="polite"></div>
+
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/poster.js"></script>
+  <script src="assets/js/video.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
